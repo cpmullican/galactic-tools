@@ -12,6 +12,13 @@ from channel_valuation import (
     valuation_range,
 )
 from transcript_processor import process_transcript
+from sponsor_revenue import (
+    ChannelMetrics,
+    estimate_sponsor_revenue,
+    format_currency,
+    upload_frequency_label,
+    calculate_brand_deal_rate,
+)
 
 
 def _format_currency(value: float) -> str:
@@ -157,6 +164,217 @@ def _render_transcript_processor() -> None:
         st.write("No explicit action items detected.")
 
 
+def _render_sponsor_revenue() -> None:
+    st.subheader("Sponsorship Revenue Estimator")
+    st.caption("Estimate potential brand deal revenue based on channel metrics.")
+    
+    st.markdown(
+        """
+        <div style="background: rgba(82, 209, 255, 0.1); border: 1px solid rgba(82, 209, 255, 0.3); 
+                    border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem;">
+            <strong>💡 How it works:</strong> This calculator uses the same algorithm powering 
+            Galactic's creator evaluation tool. It estimates brand deal rates based on average 
+            views and upload frequency to project yearly sponsorship revenue.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.form("sponsor_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            subscribers = st.number_input(
+                "Subscribers",
+                min_value=0,
+                step=10000,
+                value=250000,
+                help="Total subscriber count"
+            )
+            average_views = st.number_input(
+                "Average views per video",
+                min_value=0,
+                step=5000,
+                value=100000,
+                help="Typical views on a standard video (not shorts)"
+            )
+            monthly_views = st.number_input(
+                "Monthly views (optional)",
+                min_value=0,
+                step=100000,
+                value=0,
+                help="Total monthly views from YouTube Analytics"
+            )
+        with col2:
+            total_views = st.number_input(
+                "Total channel views",
+                min_value=0,
+                step=1000000,
+                value=50000000,
+                help="Lifetime total views"
+            )
+            video_count = st.number_input(
+                "Total video count",
+                min_value=0,
+                step=10,
+                value=150,
+                help="Number of videos on channel"
+            )
+            niche = st.selectbox(
+                "Content niche",
+                ["business", "education", "tech", "finance", "entertainment", "lifestyle", "gaming"],
+                help="Primary content category (affects rate benchmarks)"
+            )
+        
+        st.markdown("---")
+        st.markdown("**Upload Frequency Override (Optional)**")
+        use_custom_frequency = st.checkbox("Set custom upload frequency")
+        
+        if use_custom_frequency:
+            upload_frequency = st.selectbox(
+                "Upload frequency",
+                ["Daily", "2-3x per week", "Weekly", "Biweekly", "Monthly", "Less than monthly"],
+            )
+            frequency_map = {
+                "Daily": 365,
+                "2-3x per week": 130,
+                "Weekly": 52,
+                "Biweekly": 26,
+                "Monthly": 12,
+                "Less than monthly": 6
+            }
+            custom_annual_uploads = frequency_map.get(upload_frequency, 52)
+        else:
+            custom_annual_uploads = None
+        
+        submitted = st.form_submit_button("Calculate Revenue Potential")
+
+    if not submitted:
+        st.info("Enter channel metrics to estimate sponsorship revenue potential.")
+        return
+
+    if average_views <= 0:
+        st.error("Average views must be greater than 0.")
+        return
+
+    # Build metrics object
+    metrics = ChannelMetrics(
+        subscribers=subscribers,
+        total_views=total_views,
+        video_count=video_count,
+        average_views=average_views,
+        monthly_views=monthly_views if monthly_views > 0 else None
+    )
+
+    # Get estimate
+    result = estimate_sponsor_revenue(metrics)
+    
+    # Override upload frequency if custom
+    if custom_annual_uploads:
+        result.annual_uploads = custom_annual_uploads
+        result.yearly_potential = int(result.brand_deal_rate * custom_annual_uploads * 0.9)
+        result.notes.append(f"Using custom upload frequency: {upload_frequency}")
+
+    st.markdown("---")
+    
+    # Main metrics
+    metric_cols = st.columns(3)
+    metric_cols[0].metric(
+        "Brand Deal Rate",
+        format_currency(result.brand_deal_rate),
+        help="Estimated rate per sponsored integration"
+    )
+    metric_cols[1].metric(
+        "Annual Uploads",
+        f"{result.annual_uploads}",
+        f"({upload_frequency_label(result.annual_uploads)})",
+        help="Estimated videos per year"
+    )
+    metric_cols[2].metric(
+        "Yearly Revenue Potential",
+        format_currency(result.yearly_potential),
+        help="Estimated annual sponsorship revenue"
+    )
+
+    # Confidence indicator
+    confidence_colors = {
+        "high": ("rgba(123, 242, 155, 0.2)", "rgba(123, 242, 155, 0.5)", "#7bf29b"),
+        "medium": ("rgba(255, 193, 7, 0.2)", "rgba(255, 193, 7, 0.5)", "#ffc107"),
+        "low": ("rgba(255, 107, 107, 0.2)", "rgba(255, 107, 107, 0.5)", "#ff6b6b"),
+    }
+    bg, border, text = confidence_colors.get(result.confidence, confidence_colors["medium"])
+    
+    st.markdown(
+        f"""
+        <div style="margin-top: 1rem; display: inline-block; padding: 0.4rem 1rem; 
+                    border-radius: 999px; background: {bg}; border: 1px solid {border}; 
+                    color: {text}; font-weight: 600; font-size: 0.85rem;">
+            Confidence: {result.confidence.upper()}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Rate breakdown
+    st.markdown("---")
+    st.markdown("### Rate Breakdown")
+    
+    breakdown_cols = st.columns(4)
+    breakdown_cols[0].markdown("**Views**")
+    breakdown_cols[0].markdown(f"{average_views:,}")
+    
+    breakdown_cols[1].markdown("**Formula**")
+    breakdown_cols[1].markdown("0.0685 × views^0.961")
+    
+    breakdown_cols[2].markdown("**Per Integration**")
+    breakdown_cols[2].markdown(f"**{format_currency(result.brand_deal_rate)}**")
+    
+    breakdown_cols[3].markdown("**Comparable CPM**")
+    if average_views > 0:
+        effective_cpm = (result.brand_deal_rate / average_views) * 1000
+        breakdown_cols[3].markdown(f"${effective_cpm:.2f}")
+    else:
+        breakdown_cols[3].markdown("N/A")
+
+    # Quick rate table
+    st.markdown("---")
+    st.markdown("### Quick Reference: Brand Deal Rates by Views")
+    
+    view_benchmarks = [10000, 25000, 50000, 100000, 250000, 500000, 1000000]
+    rate_data = []
+    for views in view_benchmarks:
+        rate = calculate_brand_deal_rate(views)
+        rate_data.append({
+            "Avg Views": f"{views:,}",
+            "Est. Rate": format_currency(rate),
+            "Effective CPM": f"${(rate/views)*1000:.2f}"
+        })
+    
+    st.table(rate_data)
+
+    # Notes
+    with st.expander("Calculation Notes"):
+        st.markdown("**Factors considered:**")
+        for note in result.notes:
+            st.markdown(f"- {note}")
+        
+        st.markdown("---")
+        st.markdown(
+            """
+            **Methodology:**
+            - Brand deal rate formula: `rate = 0.0685 × (avg_views)^0.961`
+            - Yearly potential: `rate × annual_uploads × 0.9` (assumes 90% integration rate)
+            - Formula derived from market data in business/education niche
+            - Actual rates vary by niche, audience demographics, and negotiation
+            """
+        )
+    
+    # Niche adjustment note
+    st.info(
+        f"💡 **Niche note:** You selected '{niche}'. Business, finance, and education niches "
+        "typically command 20-50% higher rates than entertainment/lifestyle due to higher-value audiences."
+    )
+
+
 def main() -> None:
     st.set_page_config(
         page_title="Galactic Media Group | YouTube Acquisition Tools",
@@ -248,12 +466,13 @@ def main() -> None:
         st.caption("Acquisition diligence toolkit")
         page = st.radio(
             "Navigate",
-            ["Channel Valuation", "Transcript Processor"],
+            ["Channel Valuation", "Sponsor Revenue", "Transcript Processor"],
             label_visibility="visible",
         )
         st.markdown("---")
         st.markdown("**Tools included**")
         st.markdown("- Channel valuation calculator")
+        st.markdown("- Sponsor revenue estimator")
         st.markdown("- Transcript processor")
         st.markdown("---")
         st.markdown("Need channel lookup? Coming soon.")
@@ -262,6 +481,8 @@ def main() -> None:
 
     if page == "Channel Valuation":
         _render_valuation()
+    elif page == "Sponsor Revenue":
+        _render_sponsor_revenue()
     else:
         _render_transcript_processor()
 
