@@ -8,7 +8,7 @@ Estimates potential brand deal revenue based on channel metrics.
 
 import math
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
 
 
@@ -90,12 +90,16 @@ def calculate_v30(videos: List[VideoData]) -> int:
     if not regular_videos:
         return 0
     
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     total_v30 = 0
     count = 0
     
     for video in regular_videos:
-        days_since_publish = (now - video.published_at).days
+        # Ensure timezone-aware comparison
+        video_date = video.published_at
+        if video_date.tzinfo is None:
+            video_date = video_date.replace(tzinfo=timezone.utc)
+        days_since_publish = (now - video_date).days
         
         # Skip invalid dates or very new videos
         if days_since_publish <= 0:
@@ -136,12 +140,12 @@ def calculate_annual_upload_volume(videos: List[VideoData]) -> int:
     if not videos or len(videos) < 2:
         return 0
     
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     
     # Filter out shorts and future dates, take up to 25 recent videos
     regular_videos = [
         v for v in videos 
-        if not v.is_short and v.published_at <= now
+        if not v.is_short and v.published_at.replace(tzinfo=timezone.utc) <= now
     ]
     regular_videos.sort(key=lambda v: v.published_at, reverse=True)
     regular_videos = regular_videos[:25]
