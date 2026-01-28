@@ -34,12 +34,10 @@ def _inject_styles() -> None:
     st.markdown(
         """
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
-            
             :root {
                 --bg-primary: #000000;
                 --bg-secondary: #0D0C14;
-                --bg-card: rgba(13, 12, 20, 0.8);
+                --bg-card: #0D0C14;
                 --border-subtle: rgba(255, 255, 255, 0.1);
                 --border-accent: rgba(99, 102, 241, 0.3);
                 --text-primary: #ffffff;
@@ -48,17 +46,12 @@ def _inject_styles() -> None:
                 --accent-indigo: #6366f1;
                 --accent-purple: #a855f7;
                 --accent-emerald: #10b981;
-                --accent-cyan: #06b6d4;
                 --gradient-primary: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
                 --gradient-success: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
             }
             
-            /* Global App Styling */
             .stApp {
-                background: var(--bg-primary);
-                background-image: 
-                    radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-                    radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%);
+                background: #000000;
             }
             
             .stApp > header {
@@ -75,38 +68,25 @@ def _inject_styles() -> None:
                 color: var(--text-primary);
             }
             
-            /* Typography */
+            /* Typography - system fonts for speed */
             h1, h2, h3, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
-                font-family: 'Outfit', sans-serif !important;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
                 font-weight: 600;
                 color: var(--text-primary) !important;
             }
             
             p, span, label, .stMarkdown {
-                font-family: 'Inter', sans-serif !important;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
                 color: var(--text-secondary);
             }
             
             /* Hero Section */
             .hero-container {
-                position: relative;
                 background: var(--bg-card);
-                backdrop-filter: blur(20px);
                 border: 1px solid var(--border-subtle);
                 border-radius: 24px;
                 padding: 2.5rem;
                 margin-bottom: 2rem;
-                overflow: hidden;
-            }
-            
-            .hero-container::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 1px;
-                background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.5), transparent);
             }
             
             .hero-badge {
@@ -146,31 +126,18 @@ def _inject_styles() -> None:
             /* Glass Cards */
             .glass-card {
                 background: var(--bg-card);
-                backdrop-filter: blur(20px);
                 border: 1px solid var(--border-subtle);
                 border-radius: 16px;
                 padding: 1.5rem;
-                transition: all 0.3s ease;
-            }
-            
-            .glass-card:hover {
-                border-color: var(--border-accent);
-                box-shadow: 0 0 30px rgba(99, 102, 241, 0.1);
             }
             
             /* Metric Cards */
             .metric-card {
-                background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.05) 100%);
+                background: rgba(99, 102, 241, 0.08);
                 border: 1px solid var(--border-subtle);
                 border-radius: 16px;
                 padding: 1.5rem;
                 text-align: center;
-                transition: all 0.3s ease;
-            }
-            
-            .metric-card:hover {
-                transform: translateY(-2px);
-                border-color: var(--border-accent);
             }
             
             .metric-label {
@@ -229,31 +196,17 @@ def _inject_styles() -> None:
                 border: none !important;
                 border-radius: 12px !important;
                 padding: 0.75rem 2rem !important;
-                font-family: 'Inter', sans-serif !important;
                 font-weight: 600 !important;
-                transition: all 0.3s ease !important;
-            }
-            
-            .stButton > button:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3) !important;
             }
             
             /* Form Elements */
             .stTextInput > div > div > input,
             .stNumberInput > div > div > input,
             .stSelectbox > div > div {
-                background: rgba(13, 12, 20, 0.8) !important;
+                background: #0D0C14 !important;
                 border: 1px solid var(--border-subtle) !important;
                 border-radius: 12px !important;
                 color: var(--text-primary) !important;
-                font-family: 'Inter', sans-serif !important;
-            }
-            
-            .stTextInput > div > div > input:focus,
-            .stNumberInput > div > div > input:focus {
-                border-color: var(--accent-indigo) !important;
-                box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
             }
             
             /* Pills/Tags */
@@ -301,10 +254,6 @@ def _inject_styles() -> None:
                 background: transparent !important;
                 color: var(--text-secondary) !important;
                 border-bottom: 1px solid var(--border-subtle) !important;
-            }
-            
-            tbody tr:hover td {
-                background: rgba(99, 102, 241, 0.05) !important;
             }
             
             /* Expanders */
