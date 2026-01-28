@@ -400,10 +400,15 @@ def _inject_styles() -> None:
                 color: #f87171;
             }
             
-            /* Hide Streamlit branding */
+            /* Hide Streamlit branding but keep menu functional */
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
-            header {visibility: hidden;}
+            
+            /* Keep header for mobile menu toggle */
+            header[data-testid="stHeader"] {
+                background: transparent !important;
+                backdrop-filter: none !important;
+            }
         </style>
         """,
         unsafe_allow_html=True,
